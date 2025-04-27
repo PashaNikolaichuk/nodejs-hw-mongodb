@@ -36,6 +36,7 @@ const contactsSchema = new Schema(
   {
     // встановлює значення true, щоб автоматично створювати поля createdAt та updatedAt, які вказують на час створення та оновлення документа.
     timestamps: true,
+    versionKey: false,
   },
 );
 
