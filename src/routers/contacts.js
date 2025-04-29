@@ -13,7 +13,7 @@ import { ctrlWrapper } from '../utils/ctrlWrapper.js';
 const router = Router();
 
 // Якщо прийде GET-запит на /contacts — спрацює getContactsController.
-// ctrlWrapper Це обгортка, яка ловить помилки
+// ctrlWrapper Це обгортка, яка ловить помилки ~~ Express бачить next(err) "перекидає" вас в errorHandler
 router.get('/', ctrlWrapper(getContactsController));
 
 router.get('/:contactsId', ctrlWrapper(getContactsByIdController));
