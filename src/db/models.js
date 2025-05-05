@@ -1,3 +1,7 @@
+import { typeList } from '../constants/contacts.js';
+
+import { handleSaveError, setUpdateSettings } from './hook.js';
+
 // Схема визначає структуру документів в колекції. Вона визначає поля, типи даних, обмеження та інші властивості документів.
 import { model, Schema } from 'mongoose';
 
@@ -28,9 +32,9 @@ const contactsSchema = new Schema(
     contactType: {
       type: String,
       //   це перелік допустимих значень для поля.
-      enum: ['work', 'home', 'personal'],
+      enum: typeList,
       required: true,
-      default: 'personal',
+      default: typeList[2],
     },
   },
   {
@@ -39,6 +43,14 @@ const contactsSchema = new Schema(
     versionKey: false,
   },
 );
+
+// якщо після додавання сталася помилка то виконай цю функцію
+contactsSchema.post('save', handleSaveError);
+
+// перед оновленням додаю ці запити
+contactsSchema.pre('findOneAndUpdate', setUpdateSettings);
+
+contactsSchema.post('findOneAndUpdate', handleSaveError);
 
 // Модель — це клас, який використовується для взаємодії з колекцією. Mongoose створює модель за допомогою схеми.
 export const ContactsCollection = model('contacts', contactsSchema);

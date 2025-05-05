@@ -10,20 +10,44 @@ import {
 
 import { ctrlWrapper } from '../utils/ctrlWrapper.js';
 
-const router = Router();
+import { validateBody } from '../utils/validateBody.js';
 
+import { isValidId } from '../utils/isValidId.js';
+
+import {
+  createContactsSchema,
+  updateContactsSchema,
+} from '../validation/contacts.js';
+
+const router = Router();
+// перевіряє дані validateBody,  Він перевіряє дані до того, як потрапити в контролер.
 // Якщо прийде GET-запит на /contacts — спрацює getContactsController.
-// ctrlWrapper Це обгортка, яка ловить помилки
+// ctrlWrapper Це обгортка, яка ловить помилки ~~ Express бачить next(err) "перекидає" вас в errorHandler
 router.get('/', ctrlWrapper(getContactsController));
 
-router.get('/:contactsId', ctrlWrapper(getContactsByIdController));
+router.get('/:contactsId', isValidId, ctrlWrapper(getContactsByIdController));
 
-router.post('/', ctrlWrapper(createContactsController));
+router.post(
+  '/',
+  // захищає від невалідних даних.
+  validateBody(createContactsSchema),
+  ctrlWrapper(createContactsController),
+);
 
-router.put('/:contactId', ctrlWrapper(upsertContactController));
+router.put(
+  '/:contactId',
+  isValidId,
+  validateBody(createContactsSchema),
+  ctrlWrapper(upsertContactController),
+);
 
-router.patch('/:contactId', ctrlWrapper(patchContactController));
+router.patch(
+  '/:contactId',
+  isValidId,
+  validateBody(updateContactsSchema),
+  ctrlWrapper(patchContactController),
+);
 
-router.delete('/:contactId', ctrlWrapper(deleteContactController));
+router.delete('/:contactId', isValidId, ctrlWrapper(deleteContactController));
 
 export default router;
