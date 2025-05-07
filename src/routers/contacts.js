@@ -12,7 +12,7 @@ import { ctrlWrapper } from '../utils/ctrlWrapper.js';
 
 import { validateBody } from '../utils/validateBody.js';
 
-import { isValidId } from '../utils/isValidId.js';
+import { isValidId } from '../middlewares/isValidId.js';
 
 import {
   createContactsSchema,
