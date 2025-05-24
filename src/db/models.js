@@ -36,6 +36,11 @@ const contactsSchema = new Schema(
       required: true,
       default: typeList[2],
     },
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: 'user',
+      required: true,
+    },
   },
   {
     // встановлює значення true, щоб автоматично створювати поля createdAt та updatedAt, які вказують на час створення та оновлення документа.

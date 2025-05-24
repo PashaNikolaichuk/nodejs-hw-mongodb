@@ -14,12 +14,18 @@ import { validateBody } from '../utils/validateBody.js';
 
 import { isValidId } from '../middlewares/isValidId.js';
 
+import { authenticate } from '../middlewares/authenticate.js';
+
 import {
   createContactsSchema,
   updateContactsSchema,
 } from '../validation/contacts.js';
 
 const router = Router();
+
+// всі запити які проходять на contacts проходять аунтифікацію
+router.use(authenticate);
+
 // перевіряє дані validateBody,  Він перевіряє дані до того, як потрапити в контролер.
 // Якщо прийде GET-запит на /contacts — спрацює getContactsController.
 // ctrlWrapper Це обгортка, яка ловить помилки ~~ Express бачить next(err) "перекидає" вас в errorHandler

@@ -19,6 +19,9 @@ export const getContactsController = async (req, res) => {
   const { sortBy, sortOrder } = parseSortParams(req.query);
   const filter = parseFilterParams(req.query);
 
+  // Зробити фільтрацію або пошук в базі лише для поточного (авторизованого) користувача.
+  filter.userId = req.user._id;
+
   const contacts = await getAllContacts({
     page,
     perPage,
@@ -53,6 +56,9 @@ export const getContactsByIdController = async (req, res) => {
 };
 
 export const createContactsController = async (req, res) => {
+  // завдяки мідлварі authenticate ми беремо дані в саме _id, користувача
+  const { _id: userId } = req.user;
+
   try {
     await createContactsSchema.validateAsync(req.body, {
       abortEarly: false,
@@ -61,7 +67,7 @@ export const createContactsController = async (req, res) => {
     throw createHttpError(400, error.message);
   }
 
-  const contact = await createContacts(req.body);
+  const contact = await createContacts({ ...req.body, userId });
 
   res.status(201).json({
     status: 201,
