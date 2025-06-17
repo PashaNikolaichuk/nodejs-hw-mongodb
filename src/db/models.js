@@ -41,6 +41,9 @@ const contactsSchema = new Schema(
       ref: 'user',
       required: true,
     },
+    photo: {
+      type: String,
+    },
   },
   {
     // встановлює значення true, щоб автоматично створювати поля createdAt та updatedAt, які вказують на час створення та оновлення документа.

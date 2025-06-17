@@ -3,10 +3,10 @@ import createHttpError from 'http-errors';
 
 // звичайна (але дуже важлива) перевірка ID
 export const isValidId = (req, res, next) => {
-  const { contactsId } = req.params;
+  const { contactId } = req.params;
   //  якщо не правильна  ID то fasle і помилка
-  if (!isValidObjectId(contactsId)) {
-    throw createHttpError(400, `${contactsId} not valid id`);
+  if (!isValidObjectId(contactId)) {
+    throw createHttpError(400, `${contactId} not valid id`);
   }
 
   next();

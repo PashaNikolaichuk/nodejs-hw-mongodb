@@ -15,6 +15,8 @@ import { logger } from './middlewares/logger.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { notFoundHandler } from './middlewares/notFoundHandler.js';
 
+import { UPLOAD_DIR } from './constants/index.js';
+
 // Цей рядок завантажує змінні з .env у process.env
 dotenv.config();
 
@@ -30,6 +32,9 @@ export const setupServer = () => {
 
   //Виводить усі запити у консоль (тип, статус, час і т.д.)
   app.use(logger);
+
+  // Цей рядок дозволяє фронтенду (або браузеру) відкривати файли з папки UPLOAD_DIR за URL, що починається з /uploads.
+  app.use('/uploads', express.static(UPLOAD_DIR));
 
   // коли прийде будь-який запит який починається на /contacts' то шукай його в router
   app.use('/contacts', router);

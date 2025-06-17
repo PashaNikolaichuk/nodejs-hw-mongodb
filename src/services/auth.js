@@ -4,8 +4,103 @@ import bcrypt from 'bcrypt';
 
 import { FIFTEEN_MINUTES, ONE_DAY } from '../constants/user.js';
 import { SessionCollection } from '../db/session.js';
-import { randomBytes } from 'crypto';
 
+import { sendEmail } from '../utils/sendEmail.js';
+import { randomBytes } from 'crypto';
+import { getEnvVar } from '../utils/getEnvVar.js';
+import handlebars from 'handlebars';
+import jwt from 'jsonwebtoken';
+
+// вбудований модуль Node.js path — для роботи зі шляхами до файлів.
+import path from 'node:path';
+import { TEMPLATES_DIR } from '../constants/index.js';
+import fs from 'node:fs/promises';
+
+// ДЛЯ СКИДУВАННЯ ПАРОЛЮ
+export const requestResetToken = async (email) => {
+  // шукаємо в базі користувача з таким email.
+  const user = await UsersCollection.findOne({ email });
+
+  if (!user) {
+    throw createHttpError(404, 'User not found');
+  }
+  const jwtSecret = getEnvVar('JWT_SECRET');
+
+  // створюємо JWT токен з ID та email користувача
+  const resetToken = jwt.sign(
+    {
+      sub: user._id, // унікальний ідентифікатор користувача
+      email, // для зручності
+    },
+    jwtSecret,
+    {
+      // час життя токена
+      expiresIn: '24h',
+    },
+  );
+
+  // Отримай значення змінної APP_DOMAIN з .env
+  const appDomain = getEnvVar('APP_DOMAIN');
+
+  // Формується повний шлях до конкретного шаблону листа
+  const verifyEmailPath = path.join(TEMPLATES_DIR, 'verify-email.html');
+
+  // // дає змогу прочитати його
+  const templateSourse = await fs.readFile(verifyEmailPath, 'utf-8');
+
+  // // з тексту зробили хендербар шаблон
+  const template = handlebars.compile(templateSourse);
+
+  const html = template({
+    verifyLink: `${appDomain}/auth/reset?token=${resetToken}`,
+  });
+
+  // надсилаємо лист з посиланням для скидання пароля
+  await sendEmail({
+    to: email,
+    subject: 'Reset your password',
+    html,
+  });
+};
+
+const jwtSecret = getEnvVar('JWT_SECRET');
+
+//payload = password: 'новий пароль' АБО token
+export const resetPassword = async (payload) => {
+  let entries;
+
+  try {
+    //payload.token = Це токен, який користувач отримав на email, містить зашифровану інформацію про користувача
+    //jwt.verify = перевіряє токен.
+    entries = jwt.verify(payload.token, jwtSecret);
+  } catch (err) {
+    if (err instanceof Error) throw createHttpError(401, err.message);
+    throw err;
+  }
+
+  // відбувається пошук користувача в базі даних
+  const user = await UsersCollection.findOne({
+    // це email, який був закладений у JWT токен під час створення.
+    email: entries.email,
+    // це subject, зазвичай це user._id, також вкладений у токен.
+    _id: entries.sub,
+  });
+
+  if (!user) {
+    throw createHttpError(404, 'User not found');
+  }
+
+  // Хешування нового пароля
+  const encryptedPassword = await bcrypt.hash(payload.password, 10);
+
+  // Оновлення пароля в Базі Даних
+  await UsersCollection.updateOne(
+    { _id: user._id },
+    { password: encryptedPassword },
+  );
+};
+
+// 1. РЕГЕСТРАЦІЯ КОРІСТУВАЧА
 export const registerUser = async (payload) => {
   const { email } = payload;
 
@@ -16,11 +111,25 @@ export const registerUser = async (payload) => {
   // За допомогою bcrypt.hash(...) шифрує пароль: 10 — кількість раундів хешування
   const encryptedPassword = await bcrypt.hash(payload.password, 10);
 
-  return await UsersCollection.create({
+  const newUser = await UsersCollection.create({
     ...payload,
     // замінює звичайний пароль зашифрованим.
     password: encryptedPassword,
   });
+
+  return newUser;
+};
+
+export const verifyUser = async (token) => {
+  try {
+    //вона перевіряє  jwt.verify чи дійсний і ще можна витянути email
+    const { email } = jwt.verify(token, jwtSecret);
+    // ми шукаємо користувача за цим email.
+    // Якщо користувач знайдений, оновлюємо його поле verify на true
+    await UsersCollection.findOneAndUpdate({ email }, { verify: true });
+  } catch {
+    throw createHttpError(401, 'Email not verified');
+  }
 };
 
 export const loginUser = async (payload) => {
@@ -31,8 +140,9 @@ export const loginUser = async (payload) => {
 
   // якщо такого немає то помилка
   if (!user) {
-    createHttpError(401, 'Email or password invalid');
+    throw createHttpError(401, 'Email or password invalid');
   }
+
   // порівнює наданий пароль (password) із захешованим у базі через bcrypt.compare.
   // true
   const isEqual = await bcrypt.compare(password, user.password);

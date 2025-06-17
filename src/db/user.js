@@ -4,6 +4,9 @@ import { handleSaveError, setUpdateSettings } from './hook.js';
 
 import { emailRegext } from '../constants/auth.js';
 
+// Контролювати що саме зберігається в базі
+// Під час збереження в MongoDB
+
 // описує структуру об'єкта користувача в базі даних MongoDB
 const userSchema = new Schema(
   {
@@ -24,6 +27,11 @@ const userSchema = new Schema(
       type: String,
       required: true,
     },
+    verify: {
+      type: Boolean,
+      default: false,
+      required: true,
+    },
   },
   {
     timestamps: true,
@@ -39,12 +47,5 @@ userSchema.pre('findOneAndUpdate', setUpdateSettings);
 
 userSchema.post('findOneAndUpdate', handleSaveError);
 
-// // перетворює об’єкт користувача в формат, придатний для JSON, і видаляє пароль перед цим.
-// userSchema.methods.toJSON = function () {
-//   const obj = this.toObject();
-//   delete obj.password;
-//   return obj;
-// };
-
-// // Модель — це клас, який використовується для взаємодії з колекцією. Mongoose створює модель за допомогою схеми.
+// Модель — це клас, який використовується для взаємодії з колекцією. Mongoose створює модель за допомогою схеми.
 export const UsersCollection = model('users', userSchema);

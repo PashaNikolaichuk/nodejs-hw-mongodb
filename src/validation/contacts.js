@@ -2,6 +2,9 @@ import Joi from 'joi';
 
 import { typeList } from '../constants/contacts.js';
 
+// Перевірити вхідні дані від користувача
+// 	До того, як дані потраплять в базу
+
 export const createContactsSchema = Joi.object({
   name: Joi.string().min(3).max(20).required().messages({
     'any.required': 'Треба вказати назву контакту',

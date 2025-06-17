@@ -20,11 +20,12 @@ import {
   createContactsSchema,
   updateContactsSchema,
 } from '../validation/contacts.js';
+import { upload } from '../middlewares/multer.js';
 
 const router = Router();
 
 // всі запити які проходять на contacts проходять аунтифікацію
-router.use(authenticate);
+// router.use(authenticate);
 
 // перевіряє дані validateBody,  Він перевіряє дані до того, як потрапити в контролер.
 // Якщо прийде GET-запит на /contacts — спрацює getContactsController.
@@ -35,6 +36,9 @@ router.get('/:contactsId', isValidId, ctrlWrapper(getContactsByIdController));
 
 router.post(
   '/',
+  // Я очікую ОДИН файл з поля у формі з іменем "photo".
+  // <input type="file" name="photo" />,
+  upload.single('photo'),
   // захищає від невалідних даних.
   validateBody(createContactsSchema),
   ctrlWrapper(createContactsController),
@@ -50,6 +54,7 @@ router.put(
 router.patch(
   '/:contactId',
   isValidId,
+  upload.single('photo'),
   validateBody(updateContactsSchema),
   ctrlWrapper(patchContactController),
 );
