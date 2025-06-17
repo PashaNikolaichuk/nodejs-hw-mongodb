@@ -10,20 +10,55 @@ import {
 
 import { ctrlWrapper } from '../utils/ctrlWrapper.js';
 
+import { validateBody } from '../utils/validateBody.js';
+
+import { isValidId } from '../middlewares/isValidId.js';
+
+import { authenticate } from '../middlewares/authenticate.js';
+
+import {
+  createContactsSchema,
+  updateContactsSchema,
+} from '../validation/contacts.js';
+import { upload } from '../middlewares/multer.js';
+
 const router = Router();
 
+// всі запити які проходять на contacts проходять аунтифікацію
+// router.use(authenticate);
+
+// перевіряє дані validateBody,  Він перевіряє дані до того, як потрапити в контролер.
 // Якщо прийде GET-запит на /contacts — спрацює getContactsController.
-// ctrlWrapper Це обгортка, яка ловить помилки
+// ctrlWrapper Це обгортка, яка ловить помилки ~~ Express бачить next(err) "перекидає" вас в errorHandler
 router.get('/', ctrlWrapper(getContactsController));
 
-router.get('/:contactsId', ctrlWrapper(getContactsByIdController));
+router.get('/:contactsId', isValidId, ctrlWrapper(getContactsByIdController));
 
-router.post('/', ctrlWrapper(createContactsController));
+router.post(
+  '/',
+  // Я очікую ОДИН файл з поля у формі з іменем "photo".
+  // <input type="file" name="photo" />,
+  upload.single('photo'),
+  // захищає від невалідних даних.
+  validateBody(createContactsSchema),
+  ctrlWrapper(createContactsController),
+);
 
-router.put('/:contactId', ctrlWrapper(upsertContactController));
+router.put(
+  '/:contactId',
+  isValidId,
+  validateBody(createContactsSchema),
+  ctrlWrapper(upsertContactController),
+);
 
-router.patch('/:contactId', ctrlWrapper(patchContactController));
+router.patch(
+  '/:contactId',
+  isValidId,
+  upload.single('photo'),
+  validateBody(updateContactsSchema),
+  ctrlWrapper(patchContactController),
+);
 
-router.delete('/:contactId', ctrlWrapper(deleteContactController));
+router.delete('/:contactId', isValidId, ctrlWrapper(deleteContactController));
 
 export default router;

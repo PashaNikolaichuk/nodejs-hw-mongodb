@@ -6,10 +6,32 @@ import {
   deleteContact,
 } from '../services/contacts.js';
 
+import { createContactsSchema } from '../validation/contacts.js';
+
 import createHttpError from 'http-errors';
 
+import { parsePaginationParams } from '../utils/parsePaginationParams.js';
+import { parseSortParams } from '../utils/parseSortParams.js';
+import { parseFilterParams } from '../utils/parseFilterParams.js';
+import { saveFileToUploadDir } from '../utils/saveFileToUploadDir.js';
+import { saveFileToCloudinary } from '../utils/saveFileToCloudinary.js';
+import { getEnvVar } from '../utils/getEnvVar.js';
+
 export const getContactsController = async (req, res) => {
-  const contacts = await getAllContacts();
+  const { page, perPage } = parsePaginationParams(req.query);
+  const { sortBy, sortOrder } = parseSortParams(req.query);
+  const filter = parseFilterParams(req.query);
+
+  // Зробити фільтрацію або пошук в базі лише для поточного (авторизованого) користувача.
+  filter.userId = req.user._id;
+
+  const contacts = await getAllContacts({
+    page,
+    perPage,
+    sortBy,
+    sortOrder,
+    filter,
+  });
 
   res.status(200).json({
     status: 200,
@@ -37,7 +59,18 @@ export const getContactsByIdController = async (req, res) => {
 };
 
 export const createContactsController = async (req, res) => {
-  const contact = await createContacts(req.body);
+  // завдяки мідлварі authenticate ми беремо дані в саме _id, користувача
+  const { _id: userId } = req.user;
+
+  try {
+    await createContactsSchema.validateAsync(req.body, {
+      abortEarly: false,
+    });
+  } catch (error) {
+    throw createHttpError(400, error.message);
+  }
+
+  const contact = await createContacts({ ...req.body, userId });
 
   res.status(201).json({
     status: 201,
@@ -71,7 +104,22 @@ export const upsertContactController = async (req, res) => {
 export const patchContactController = async (req, res) => {
   const { contactId } = req.params;
 
-  const result = await updateContact(contactId, req.body);
+  const photo = req.file;
+
+  let photoUrl;
+
+  if (photo) {
+    if (getEnvVar('ENABLE_CLOUDINARY') === 'true') {
+      photoUrl = await saveFileToCloudinary(photo);
+    } else {
+      photoUrl = await saveFileToUploadDir(photo);
+    }
+  }
+
+  const result = await updateContact(contactId, {
+    ...req.body,
+    photo: photoUrl,
+  });
 
   if (!result) {
     throw createHttpError(404, 'Contact not found');
@@ -80,17 +128,17 @@ export const patchContactController = async (req, res) => {
   res.json({
     status: 200,
     message: `Successfully patched a Contact!`,
-    data: result,
+    data: result.contact,
   });
 };
 
 export const deleteContactController = async (req, res) => {
   const { contactId } = req.params;
 
-  const contact = deleteContact(contactId);
+  const contact = await deleteContact(contactId);
 
   if (!contact) {
-    throw createHttpError(404, 'Student not found');
+    throw createHttpError(404, 'Contact not found');
   }
 
   res.status(204).send();
